@@ -1,6 +1,6 @@
 namespace Models
 {
-    record ProductRequest(
+    public record ProductRequest(
     string Name,
     decimal Price
     );

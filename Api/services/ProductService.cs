@@ -2,7 +2,7 @@ using Models;
 
 namespace Services
 {
-    internal class ProductService
+    public class ProductService
     {
         private List<Product> products = new List<Product>
         {
