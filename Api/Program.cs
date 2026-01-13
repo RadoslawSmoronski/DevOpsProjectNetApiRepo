@@ -1,3 +1,6 @@
+using Services;
+using Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
@@ -8,42 +11,55 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-var products = new List<Product>
-{
-    new(1, "Laptop", 999.99m),
-    new(2, "Phone", 599.99m)
-};
+var productService = new ProductService();
 
-app.MapGet("/products", () => Results.Ok(products));
+app.MapGet("/products", () => Results.Ok(productService.Get()));
 
 app.MapGet("/products/{id:int}", (int id) =>
 {
-    var product = products.FirstOrDefault(p => p.Id == id);
+    var product = productService.Get(id);
     return product is not null ? Results.Ok(product) : Results.NotFound();
 });
 
 app.MapGet("/products/search", (string? name) =>
 {
     if (string.IsNullOrEmpty(name)) return Results.BadRequest("Name is required");
-    var found = products.Where(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
-    return Results.Ok(found);
+    return Results.Ok(productService.Get(name));
 });
 
-app.MapPost("/products", (Product product) =>
+app.MapPost("/products", (ProductRequest productRequest) =>
 {
-    products.Add(product);
-    return Results.Created($"/products/{product.Id}", product);
+    try
+    {
+        var product = productService.Create(productRequest.Name, productRequest.Price);
+        return Results.Created($"/products/{product.Id}", product);
+    }
+    catch(ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch(Exception ex)
+    {
+        return Results.InternalServerError(ex.Message);
+    }
 });
 
 app.MapDelete("/products/{id:int}", (int id) =>
 {
-    var product = products.FirstOrDefault(p => p.Id == id);
-    if (product is null) return Results.NotFound();
-    
-    products.Remove(product);
-    return Results.NoContent();
+    try
+    {
+        productService.Delete(id);
+        return Results.NoContent();
+    }
+    catch(KeyNotFoundException)
+    {
+        return Results.NotFound();
+    }
+    catch(Exception ex)
+    {
+        return Results.InternalServerError(ex.Message);
+    }
+
 });
 
 app.Run();
-
-record Product(int Id, string Name, decimal Price);
